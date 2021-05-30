@@ -4,6 +4,7 @@
 
 # Replace / with _ to create a valid tag
 TAG_ORIG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
+TAG_PLOT=${TAG}_plot
 TAG="${TAG_ORIG}_pi"
 
 PI_PLATFORM="linux/arm,linux/arm/v7,linux/arm64"
@@ -15,6 +16,9 @@ echo "${GITHUB_SHA}" > freqtrade_commit
 
 if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
     echo "event ${GITHUB_EVENT_NAME}: full rebuild - skipping cache"
+
+    docker build -t freqtrade:${TAG_ORIG} .
+
     docker buildx build \
         --cache-to=type=registry,ref=${CACHE_TAG} \
         -f docker/Dockerfile.armhf \
@@ -22,6 +26,10 @@ if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
         -t ${IMAGE_NAME}:${TAG} --push .
 else
     echo "event ${GITHUB_EVENT_NAME}: building with cache"
+
+    docker pull ${IMAGE_NAME}:${TAG}
+    docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
+
     # Pull last build to avoid rebuilding the whole image
     # docker pull --platform ${PI_PLATFORM} ${IMAGE_NAME}:${TAG}
     docker buildx build \
@@ -31,8 +39,26 @@ else
         --platform ${PI_PLATFORM} \
         -t ${IMAGE_NAME}:${TAG} --push .
 fi
+# Tag image for upload and next build step
+docker tag freqtrade:$TAG ${IMAGE_NAME}:$TAG
+
+docker build --cache-from freqtrade:${TAG} --build-arg sourceimage=${TAG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
+
+docker tag freqtrade:$TAG_PLOT ${IMAGE_NAME}:$TAG_PLOT
+
+# Run backtest
+docker run --rm -v $(pwd)/config_bittrex.json.example:/freqtrade/config.json:ro -v $(pwd)/tests:/tests freqtrade:${TAG} backtesting --datadir /tests/testdata --strategy-path /tests/strategy/strats/ --strategy DefaultStrategy
+
+if [ $? -ne 0 ]; then
+    echo "failed running backtest"
+    return 1
+fi
 
 docker images
+
+docker push ${IMAGE_NAME}
+docker push ${IMAGE_NAME}:$TAG_PLOT
+docker push ${IMAGE_NAME}:$TAG
 
 # Create multiarch image
 # Make sure that all images contained here are pushed to github first.
@@ -40,6 +66,13 @@ docker images
 
 docker manifest create freqtradeorg/freqtrade:${TAG_ORIG} ${IMAGE_NAME}:${TAG_ORIG} ${IMAGE_NAME}:${TAG}
 docker manifest push freqtradeorg/freqtrade:${TAG_ORIG}
+
+# Tag as latest for develop builds
+if [ "${TAG}" = "develop" ]; then
+    docker manifest create freqtradeorg/freqtrade:latest ${IMAGE_NAME}:${TAG_ORIG} ${IMAGE_NAME}:${TAG}
+    docker manifest push freqtradeorg/freqtrade:latest
+fi
+
 
 docker images
 

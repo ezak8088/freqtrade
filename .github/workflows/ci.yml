@@ -393,12 +393,12 @@ jobs:
     - name: Available platforms
       run: echo ${{ steps.buildx.outputs.platforms }}
 
-    - name: Build and test and push docker image
-      env:
-        IMAGE_NAME: freqtradeorg/freqtrade
-        BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
-      run: |
-        build_helpers/publish_docker.sh
+    # - name: Build and test and push docker image
+    #   env:
+    #     IMAGE_NAME: freqtradeorg/freqtrade
+    #     BRANCH_NAME: ${{ steps.extract_branch.outputs.branch }}
+    #   run: |
+    #     build_helpers/publish_docker.sh
 
     - name: Build Raspberry docker image
       env:
