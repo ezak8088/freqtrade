@@ -6,7 +6,7 @@
 TAG_ORIG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
 TAG="${TAG_ORIG}_pi"
 
-PI_PLATFORM="linux/arm/v7"
+PI_PLATFORM="linux/arm/v7,linux/arm,linux/arm64 "
 echo "Running for ${TAG}"
 CACHE_TAG=freqtradeorg/freqtrade_cache:${TAG}_cache
 

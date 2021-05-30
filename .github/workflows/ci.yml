@@ -6,6 +6,7 @@ on:
       - master
       - stable
       - develop
+      - test_multiarch
     tags:
   release:
     types: [published]
