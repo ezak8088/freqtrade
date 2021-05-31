@@ -37,7 +37,7 @@ ENV LD_LIBRARY_PATH /usr/local/lib
 COPY --chown=ftuser:ftuser requirements.txt /freqtrade/
 USER ftuser
 RUN  pip install --user --no-cache-dir numpy \
-  && pip install --user --no-cache-dir -r requirements.txt
+  && HDF5_DIR=/usr/lib/arm-linux-gnueabihf; pip install --user --no-cache-dir -r requirements.txt
 
 # Copy dependencies to runtime-image
 FROM base as runtime-image
