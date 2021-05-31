@@ -39,6 +39,11 @@ else
         --platform ${PI_PLATFORM} \
         -t ${IMAGE_NAME}:${TAG} --push .
 fi
+
+if [ $? -ne 0 ]; then
+    echo "failed building multiarch images"
+    return 1
+fi
 # Tag image for upload and next build step
 docker tag freqtrade:$TAG ${IMAGE_NAME}:$TAG
 
