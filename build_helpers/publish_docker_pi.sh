@@ -3,9 +3,9 @@
 # The below assumes a correctly setup docker buildx environment
 
 # Replace / with _ to create a valid tag
-TAG_ORIG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
-TAG_PLOT=${TAG_ORIG}_plot
-TAG="${TAG_ORIG}_pi"
+TAG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
+TAG_PLOT=${TAG}_plot
+TAG_PI="${TAG}_pi"
 
 PI_PLATFORM="linux/arm/v7"
 echo "Running for ${TAG}"
@@ -17,18 +17,18 @@ echo "${GITHUB_SHA}" > freqtrade_commit
 if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
     echo "event ${GITHUB_EVENT_NAME}: full rebuild - skipping cache"
 
-    docker build -t freqtrade:${TAG_ORIG} .
+    docker build -t freqtrade:${TAG} .
 
     docker buildx build \
         --cache-to=type=registry,ref=${CACHE_TAG} \
         -f docker/Dockerfile.armhf \
         --platform ${PI_PLATFORM} \
-        -t ${IMAGE_NAME}:${TAG} --push .
+        -t ${IMAGE_NAME}:${TAG_PI} --push .
 else
     echo "event ${GITHUB_EVENT_NAME}: building with cache"
 
-    docker pull ${IMAGE_NAME}:${TAG_ORIG}
-    docker build --cache-from ${IMAGE_NAME}:${TAG_ORIG} -t freqtrade:${TAG_ORIG} .
+    docker pull ${IMAGE_NAME}:${TAG}
+    docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
 
     # Pull last build to avoid rebuilding the whole image
     # docker pull --platform ${PI_PLATFORM} ${IMAGE_NAME}:${TAG}
@@ -37,7 +37,7 @@ else
         --cache-to=type=registry,ref=${CACHE_TAG} \
         -f docker/Dockerfile.armhf \
         --platform ${PI_PLATFORM} \
-        -t ${IMAGE_NAME}:${TAG} --push .
+        -t ${IMAGE_NAME}:${TAG_PI} --push .
 fi
 
 if [ $? -ne 0 ]; then
@@ -47,7 +47,7 @@ fi
 # Tag image for upload and next build step
 docker tag freqtrade:$TAG ${IMAGE_NAME}:$TAG
 
-docker build --cache-from freqtrade:${TAG_ORIG} --build-arg sourceimage=${TAG_ORIG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
+docker build --cache-from freqtrade:${TAG} --build-arg sourceimage=${TAG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
 
 docker tag freqtrade:$TAG_PLOT ${IMAGE_NAME}:$TAG_PLOT
 
@@ -69,12 +69,12 @@ docker push ${IMAGE_NAME}:$TAG
 # Make sure that all images contained here are pushed to github first.
 # Otherwise installation might fail.
 
-docker manifest create freqtradeorg/freqtrade:${TAG_ORIG} ${IMAGE_NAME}:${TAG_ORIG} ${IMAGE_NAME}:${TAG}
-docker manifest push freqtradeorg/freqtrade:${TAG_ORIG}
+docker manifest create freqtradeorg/freqtrade:${TAG} ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}:${TAG_PI}
+docker manifest push freqtradeorg/freqtrade:${TAG}
 
 # Tag as latest for develop builds
 if [ "${TAG}" = "develop" ]; then
-    docker manifest create freqtradeorg/freqtrade:latest ${IMAGE_NAME}:${TAG_ORIG} ${IMAGE_NAME}:${TAG}
+    docker manifest create freqtradeorg/freqtrade:latest ${IMAGE_NAME}:${TAG} ${IMAGE_NAME}:${TAG_PI}
     docker manifest push freqtradeorg/freqtrade:latest
 fi
 
