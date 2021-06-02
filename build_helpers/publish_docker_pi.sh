@@ -4,7 +4,7 @@
 
 # Replace / with _ to create a valid tag
 TAG_ORIG=$(echo "${BRANCH_NAME}" | sed -e "s/\//_/g")
-TAG_PLOT=${TAG}_plot
+TAG_PLOT=${TAG_ORIG}_plot
 TAG="${TAG_ORIG}_pi"
 
 PI_PLATFORM="linux/arm/v7"
@@ -27,8 +27,8 @@ if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
 else
     echo "event ${GITHUB_EVENT_NAME}: building with cache"
 
-    docker pull ${IMAGE_NAME}:${TAG}
-    docker build --cache-from ${IMAGE_NAME}:${TAG} -t freqtrade:${TAG} .
+    docker pull ${IMAGE_NAME}:${TAG_ORIG}
+    docker build --cache-from ${IMAGE_NAME}:${TAG_ORIG} -t freqtrade:${TAG_ORIG} .
 
     # Pull last build to avoid rebuilding the whole image
     # docker pull --platform ${PI_PLATFORM} ${IMAGE_NAME}:${TAG}
@@ -47,7 +47,7 @@ fi
 # Tag image for upload and next build step
 docker tag freqtrade:$TAG ${IMAGE_NAME}:$TAG
 
-docker build --cache-from freqtrade:${TAG} --build-arg sourceimage=${TAG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
+docker build --cache-from freqtrade:${TAG_ORIG} --build-arg sourceimage=${TAG_ORIG} -t freqtrade:${TAG_PLOT} -f docker/Dockerfile.plot .
 
 docker tag freqtrade:$TAG_PLOT ${IMAGE_NAME}:$TAG_PLOT
 
